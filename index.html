@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Placa WMS — Unidasul</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #eef1f5;
+    padding: 20px 12px 60px;
+  }
+  .app { max-width: 820px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 22px; margin-bottom: 18px; color: #1a2b4a; }
+
+  /* ===== FORMULÁRIO ===== */
+  .form-card {
+    background: #fff; border-radius: 12px; padding: 18px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.08); margin-bottom: 20px;
+  }
+  .form-card h2 { font-size: 15px; color: #555; margin-bottom: 12px; }
+  .linha { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .campo { flex: 1 1 140px; }
+  .campo label { display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px; }
+  .campo input, .campo select {
+    width: 100%; padding: 9px 10px; border: 1px solid #ccd2da;
+    border-radius: 8px; font-size: 15px; background: #fff;
+  }
+  .campo input:focus, .campo select:focus { outline: 2px solid #1a73e8; border-color: transparent; }
+  .aviso {
+    background: #fff3cd; border: 1px solid #ffe08a; color: #856404;
+    padding: 8px 12px; border-radius: 8px; font-size: 13px; display: none; margin-bottom: 10px;
+  }
+  .preview-codigo {
+    background: #1a2b4a; color: #fff; padding: 10px 14px; border-radius: 8px;
+    font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 12px; text-align: center;
+  }
+  .botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+  .botoes button {
+    flex: 1 1 200px; padding: 14px; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: bold; cursor: pointer; color: #fff;
+  }
+  #btn-imprimir { background: linear-gradient(90deg, #198754, #20c997); }
+  #btn-imprimir:hover { filter: brightness(.92); }
+  #btn-limpar { background: #6c757d; }
+
+  /* ===== PLACA (PREVIEW) ===== */
+  #area-placa { display: flex; justify-content: center; }
+  .placa {
+    width: 794px; max-width: 100%; aspect-ratio: 794 / 1123;
+    background: #fff; padding: 28px 30px;
+    display: flex; flex-direction: column;
+    font-family: Arial, Helvetica, sans-serif;
+    box-shadow: 0 4px 18px rgba(0,0,0,.15);
+  }
+  .p-cabecalho {
+    background: #000; color: #fff; font-weight: bold; font-size: 22px;
+    padding: 12px 16px; letter-spacing: .5px;
+  }
+  .p-linha-topo { display: flex; gap: 14px; margin-top: 6px; }
+  .p-etiqueta {
+    flex: 1.6; border: 2px solid #333; padding: 8px 10px; display: flex; flex-direction: column;
+  }
+  .p-etiqueta .legenda { font-size: 11px; color: #444; font-weight: bold; margin-bottom: 4px; }
+  .p-etiqueta .codigo-area { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .p-etiqueta svg { max-width: 100%; height: auto; }
+  .p-etiqueta .num-codigo { text-align: center; font-size: 20px; font-weight: bold; font-family: "Libre Barcode 39 Text", monospace; letter-spacing: 2px; }
+  .p-setores { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+  .p-setor { display: flex; align-items: center; gap: 12px; }
+  .p-caixinha {
+    width: 34px; height: 34px; border: 3px solid #000;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: bold;
+  }
+  .p-nome-setor { font-size: 34px; font-weight: bold; }
+  .p-data {
+    background: #000; color: #fff; text-align: center; font-weight: bold;
+    font-size: 20px; padding: 10px; margin-top: 6px;
+  }
+  .p-turno { font-size: 24px; font-weight: bold; margin: 26px 0 0 6px; }
+  .p-filial-grande {
+    text-align: center; font-size: 200px; font-weight: bold; line-height: 1;
+    margin: 10px 0; flex: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .p-descricao { text-align: center; font-size: 22px; margin-bottom: 14px; }
+  .p-quantidades {
+    border: 2px solid #999; background: #f8f9fa; padding: 16px 22px;
+    display: flex; flex-direction: column; gap: 14px; font-size: 26px; font-weight: bold;
+  }
+  .p-quantidades .q-linha { display: flex; }
+  .p-quantidades .q-linha span { flex: 1; }
+  .p-pedido {
+    background: #d3d3d3; text-align: center; font-weight: bold;
+    font-size: 34px; padding: 12px; margin-top: 10px; letter-spacing: .5px;
+  }
+  .p-box {
+    border: 2px solid #333; margin-top: 10px; padding: 10px 18px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .p-box .p-box-label { font-size: 30px; font-weight: bold; }
+  .p-box .p-box-valor { font-size: 60px; font-weight: bold; margin-left: auto; line-height: 1; }
+
+  /* ===== IMPRESSÃO ===== */
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .form-card, .botoes, h1 { display: none !important; }
+    #area-placa { display: block; }
+    .placa { box-shadow: none; width: 210mm; height: 297mm; padding: 9mm 10mm; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>📦 Gerador de Placa WMS — Unidasul</h1>
+
+  <div class="form-card">
+    <h2>Dados da carga</h2>
+    <div class="linha">
+      <div class="campo" style="flex:0 0 110px">
+        <label>Filial (nº)</label>
+        <input type="number" id="f-filial" value="13" min="1">
+      </div>
+      <div class="campo">
+        <label>Data</label>
+        <input type="date" id="f-data">
+      </div>
+      <div class="campo" style="flex:0 0 130px">
+        <label>Turno</label>
+        <select id="f-turno">
+          <option value="DIA" selected>DIA</option>
+          <option value="NOITE">NOITE</option>
+        </select>
+      </div>
+    </div>
+    <div class="linha">
+      <div class="campo" style="flex:0 0 160px">
+        <label>Nº do Pedido (8 dígitos)</label>
+        <input type="text" id="f-pedido" value="68288711" inputmode="numeric" maxlength="8">
+      </div>
+      <div class="campo" style="flex:0 0 120px">
+        <label>Nº da carga</label>
+        <input type="number" id="f-carga" value="1" min="1" max="9999">
+      </div>
+      <div class="campo">
+        <label>Box</label>
+        <input type="text" id="f-box" value="QUI0013">
+      </div>
+    </div>
+    <div class="linha">
+      <div class="campo">
+        <label>Descrição da carga</label>
+        <input type="text" id="f-descricao" value="1ª carga filial 13 Gravatai">
+      </div>
+    </div>
+    <div class="linha">
+      <div class="campo">
+        <label>Pallet PBR</label>
+        <input type="number" id="f-pbr" value="1" min="0">
+      </div>
+      <div class="campo">
+        <label>Palete CHEP</label>
+        <input type="number" id="f-chep" value="0" min="0">
+      </div>
+      <div class="campo">
+        <label>Nº CX. Preta</label>
+        <input type="number" id="f-cxpreta" value="5" min="0">
+      </div>
+      <div class="campo">
+        <label>Chapas</label>
+        <input type="number" id="f-chapas" value="1" min="0">
+      </div>
+    </div>
+    <div class="aviso" id="aviso">⚠️ O pedido deve ter exatamente 8 dígitos.</div>
+  </div>
+
+  <div class="preview-codigo">
+    Código WMS: <span id="preview-codigo">00682887110001</span>
+  </div>
+
+  <div class="botoes">
+    <button id="btn-imprimir" type="button">🖨️ Imprimir / Salvar em PDF</button>
+    <button id="btn-limpar" type="button">🧹 Limpar campos</button>
+  </div>
+
+  <!-- ===== PLACA ===== -->
+  <div id="area-placa">
+    <div class="placa" id="placa">
+      <div class="p-cabecalho">Unidasul - Filial <span id="p-filial-cab">13</span></div>
+      <div class="p-linha-topo">
+        <div class="p-etiqueta">
+          <div class="legenda">INSIRA A ETIQUETA AQUI (CÓDIGO WMS)</div>
+          <div class="codigo-area"><svg id="barcode"></svg></div>
+        </div>
+        <div class="p-setores">
+          <div class="p-setor">
+            <div class="p-caixinha" id="cx-decsul">X</div>
+            <div class="p-nome-setor">DECSUL</div>
+          </div>
+          <div class="p-setor">
+            <div class="p-caixinha" id="cx-cad2"></div>
+            <div class="p-nome-setor">CAD2</div>
+          </div>
+        </div>
+      </div>
+      <div class="p-data"><span id="p-data">18/09/2026</span></div>
+      <div class="p-turno">TURNO: <span id="p-turno">DIA</span></div>
+      <div class="p-filial-grande" id="p-filial">13</div>
+      <div class="p-descricao" id="p-descricao">1ª carga filial 13 Gravatai</div>
+      <div class="p-quantidades">
+        <div class="q-linha"><span>TOTAL PALLETS: <span id="p-total-pallets">1</span></span></div>
+        <div class="q-linha"><span>PBR: <span id="p-pbr">1</span></span><span>CHEP: <span id="p-chep">0</span></span></div>
+        <div class="q-linha"><span>Nº CX. PRETA: <span id="p-cxpreta">5</span></span><span>CHAPAS: <span id="p-chapas">1</span></span></div>
+      </div>
+      <div class="p-pedido">PEDIDO: <span id="p-pedido">68288711</span> - <span id="p-setor-nome">Decsul</span></div>
+      <div class="p-box">
+        <div class="p-box-label">BOX</div>
+        <div class="p-box-valor" id="p-box">QUI0013</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // Data de hoje, formatada
+  (function () {
+    const d = new Date();
+    $('f-data').value = d.toISOString().slice(0, 10);
+  })();
+
+  // Restringe pedido a dígitos
+  $('f-pedido').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 8);
+  });
+
+  function atualizar() {
+    const filial    = $('f-filial').value || '';
+    const pedido    = ($('f-pedido').value || '').padStart(8, '0').slice(-8);
+    const carga     = String(parseInt($('f-carga').value || '1', 10)).padStart(4, '0');
+    const dataISO   = $('f-data').value;
+    const [ano, mes, dia] = dataISO ? dataISO.split('-') : ['', '', ''];
+    const setor     = $('f-turno').value === 'NOITE' ? false : true; // placeholder p/ uso futuro
+    const setorNome = document.querySelector('.p-caixinha#cx-decsul').textContent.trim() ? 'Decsul' : 'CAD2';
+
+    const codigo = '00' + pedido + carga;
+
+    // Placa
+    $('p-filial-cab').textContent = filial;
+    $('p-filial').textContent = filial;
+    $('p-data').textContent = dia + '/' + mes + '/' + ano;
+    $('p-turno').textContent = $('f-turno').value;
+    $('p-descricao').textContent = $('f-descricao').value;
+    $('p-pedido').textContent = pedido;
+    $('p-box').textContent = $('f-box').value;
+    $('p-pbr').textContent = $('f-pbr').value || '0';
+    $('p-chep').textContent = $('f-chep').value || '0';
+    $('p-cxpreta').textContent = $('f-cxpreta').value || '0';
+    $('p-chapas').textContent = $('f-chapas').value || '1';
+    $('p-total-pallets').textContent = String(
+      (parseInt($('f-pbr').value || '0', 10)) + (parseInt($('f-chep').value || '0', 10))
+    );
+    $('preview-codigo').textContent = codigo;
+
+    // Validação do pedido
+    const valido = ($('f-pedido').value || '').length === 8;
+    $('aviso').style.display = valido ? 'none' : 'block';
+
+    // Barcode
+    try {
+      JsBarcode('#barcode', codigo, {
+        format: 'CODE128',
+        width: 2.2,
+        height: 70,
+        displayValue: true,
+        fontSize: 20,
+        font: 'bold 20px monospace',
+        textMargin: 4,
+        margin: 2
+      });
+    } catch (e) { /* aguarda dígitos suficientes */ }
+  }
+
+  // Setor: alternar X entre DECSUL e CAD2 (clicável)
+  function marcarSetor(nome) {
+    $('cx-decsul').textContent = nome === 'DECSUL' ? 'X' : '';
+    $('cx-cad2').textContent   = nome === 'CAD2'   ? 'X' : '';
+    atualizar();
+  }
+  $('cx-decsul').addEventListener('click', () => marcarSetor('DECSUL'));
+  $('cx-cad2').addEventListener('click',   () => marcarSetor('CAD2'));
+
+  // Setor também acompanha o turno? Não — setor é independente; usa o que está marcado
+  const _atualizarSetor = () => {
+    const setor = $('cx-decsul').textContent.trim() ? 'Decsul' : 'CAD2';
+    $('p-setor-nome').textContent = setor;
+  };
+  const _atualizarOriginal = atualizar;
+  atualizar = function () { _atualizarOriginal(); _atualizarSetor(); };
+
+  $('btn-imprimir').addEventListener('click', () => window.print());
+  $('btn-limpar').addEventListener('click', () => {
+    ['f-pedido', 'f-box', 'f-descricao'].forEach(id => $(id).value = '');
+    ['f-pbr', 'f-chep', 'f-cxpreta', 'f-chapas', 'f-carga'].forEach(id => $(id).value = '0');
+    $('f-carga').value = '1';
+    atualizar();
+  });
+
+  // Regenera ao digitar em qualquer campo
+  document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', atualizar);
+    el.addEventListener('change', atualizar);
+  });
+
+  atualizar();
+
+  // ===== RECEBE DADOS PELA URL (para o bookmarklet do WMS) =====
+  // Ex.: gerador.html?pedido=68288711&carga=2&filial=13&box=QUI0013&setor=CAD2&pbr=3&chep=1&cxpreta=5&chapas=2&descricao=2a+carga+filial+13&turno=DIA
+  const params = new URLSearchParams(location.search);
+  if ([...params.keys()].length > 0) {
+    const mapa = {
+      pedido: 'f-pedido', filial: 'f-filial', carga: 'f-carga', box: 'f-box',
+      pbr: 'f-pbr', chep: 'f-chep', cxpreta: 'f-cxpreta', chapas: 'f-chapas',
+      descricao: 'f-descricao', data: 'f-data'
+    };
+    for (const [chave, valor] of params) {
+      if (chave === 'setor') { marcarSetor(valor.toUpperCase()); continue; }
+      if (chave === 'turno') { $('f-turno').value = valor.toUpperCase(); continue; }
+      const id = mapa[chave];
+      if (id && $(id)) $(id).value = valor;
+    }
+    atualizar();
+  }
+</script>
+</body>
+</html>
