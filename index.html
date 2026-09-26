@@ -237,8 +237,21 @@
     this.value = this.value.replace(/\D/g, '').slice(0, 8);
   });
 
+  // Controle de "campo tocado": box e descricao so auto-sugerem enquanto o usuario nao editar manualmente
+  var boxTocado = false, descTocado = false;
+  $('f-box').addEventListener('input', function () { boxTocado = true; });
+  $('f-descricao').addEventListener('input', function () { descTocado = true; });
+
   function atualizar() {
-    const filial    = $('f-filial').value || '';
+    let filial    = $('f-filial').value || '';
+    const usaCad2 = $('cx-cad2').textContent.trim() !== '';
+
+    // Auto-sugestao de box e descricao conforme a filial (enquanto nao editados)
+    if (!boxTocado)   $('f-box').value = (usaCad2 ? 'CAD00' : 'QUI00') + filial;
+    if (!descTocado) {
+      const n = parseInt($('f-carga').value || '1', 10) || 1;
+      $('f-descricao').value = n + '\u00aa carga filial ' + filial;
+    }
     const pedido    = ($('f-pedido').value || '').padStart(8, '0').slice(-8);
     const carga     = String(parseInt($('f-carga').value || '1', 10)).padStart(4, '0');
     const dataISO   = $('f-data').value;
@@ -306,6 +319,7 @@
     ['f-pedido', 'f-box', 'f-descricao'].forEach(id => $(id).value = '');
     ['f-pbr', 'f-chep', 'f-cxpreta', 'f-chapas', 'f-carga'].forEach(id => $(id).value = '0');
     $('f-carga').value = '1';
+    boxTocado = false; descTocado = false;
     atualizar();
   });
 
