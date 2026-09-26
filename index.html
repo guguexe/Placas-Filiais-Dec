@@ -247,7 +247,11 @@
     const usaCad2 = $('cx-cad2').textContent.trim() !== '';
 
     // Auto-sugestao de box e descricao conforme a filial (enquanto nao editados)
-    if (!boxTocado)   $('f-box').value = (usaCad2 ? 'CAD00' : 'QUI00') + filial;
+    // Prioridade: box ja usado nessa filial (memoria do navegador) > formula padrao
+    if (!boxTocado) {
+      var salvo = boxSalvo(filial);
+      $('f-box').value = salvo || (usaCad2 ? 'CAD00' : 'QUI00') + filial;
+    }
     if (!descTocado) {
       const n = parseInt($('f-carga').value || '1', 10) || 1;
       $('f-descricao').value = n + '\u00aa carga filial ' + filial;
@@ -297,6 +301,22 @@
     } catch (e) { /* aguarda dígitos suficientes */ }
   }
 
+  // ===== Memoria de box por filial (localStorage) =====
+  function boxSalvo(filial) {
+    try {
+      var mapa = JSON.parse(localStorage.getItem('placasWMS_box') || '{}');
+      return mapa[filial] || null;
+    } catch (e) { return null; }
+  }
+  function salvarBox(filial, box) {
+    if (!filial || !box) return;
+    try {
+      var mapa = JSON.parse(localStorage.getItem('placasWMS_box') || '{}');
+      mapa[filial] = box;
+      localStorage.setItem('placasWMS_box', JSON.stringify(mapa));
+    } catch (e) { /* navegador sem permisso */ }
+  }
+
   // Setor: alternar X entre DECSUL e CAD2 (clicável)
   function marcarSetor(nome) {
     $('cx-decsul').textContent = nome === 'DECSUL' ? 'X' : '';
@@ -314,7 +334,11 @@
   const _atualizarOriginal = atualizar;
   atualizar = function () { _atualizarOriginal(); _atualizarSetor(); };
 
-  $('btn-imprimir').addEventListener('click', () => window.print());
+  $('btn-imprimir').addEventListener('click', () => {
+    // Grava o box usado para esta filial (memoria do navegador)
+    salvarBox($('f-filial').value, $('f-box').value);
+    window.print();
+  });
   $('btn-limpar').addEventListener('click', () => {
     ['f-pedido', 'f-box', 'f-descricao'].forEach(id => $(id).value = '');
     ['f-pbr', 'f-chep', 'f-cxpreta', 'f-chapas', 'f-carga'].forEach(id => $(id).value = '0');
