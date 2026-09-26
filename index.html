@@ -138,7 +138,7 @@
     <div class="linha">
       <div class="campo" style="flex:0 0 160px">
         <label>Nº do Pedido (8 dígitos)</label>
-        <input type="text" id="f-pedido" value="68288711" inputmode="numeric" maxlength="8">
+        <input type="text" id="f-pedido" value="" inputmode="numeric" maxlength="8" placeholder="8 dígitos">
       </div>
       <div class="campo" style="flex:0 0 120px">
         <label>Nº da carga</label>
@@ -152,7 +152,7 @@
     <div class="linha">
       <div class="campo">
         <label>Descrição da carga</label>
-        <input type="text" id="f-descricao" value="1ª carga filial 13 Gravatai">
+        <input type="text" id="f-descricao" value="" placeholder="ex.: 1ª carga filial 13 Gravatai">
       </div>
     </div>
     <div class="linha">
@@ -335,8 +335,12 @@
   atualizar = function () { _atualizarOriginal(); _atualizarSetor(); };
 
   $('btn-imprimir').addEventListener('click', () => {
-    // Grava o box usado para esta filial (memoria do navegador)
+    // Grava o box usado para esta filial + ultima filial/turno (memoria do navegador)
     salvarBox($('f-filial').value, $('f-box').value);
+    try {
+      localStorage.setItem('placasWMS_ultimaFilial', $('f-filial').value);
+      localStorage.setItem('placasWMS_ultimoTurno', $('f-turno').value);
+    } catch (e) { /* sem permisso */ }
     window.print();
   });
   $('btn-limpar').addEventListener('click', () => {
@@ -370,6 +374,16 @@
       const id = mapa[chave];
       if (id && $(id)) $(id).value = valor;
     }
+    atualizar();
+  } else {
+    // Sem parametros: abre inteligente — ultima filial usada, campos de carga limpos
+    var ultimaFilial = null;
+    try { ultimaFilial = localStorage.getItem('placasWMS_ultimaFilial'); } catch (e) { }
+    if (ultimaFilial) $('f-filial').value = ultimaFilial;
+    try {
+      var ultimoTurno = localStorage.getItem('placasWMS_ultimoTurno');
+      if (ultimoTurno) $('f-turno').value = ultimoTurno;
+    } catch (e) { }
     atualizar();
   }
 </script>
